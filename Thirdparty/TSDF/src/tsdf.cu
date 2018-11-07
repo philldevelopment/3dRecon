@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <unordered_map>
 #include <cstring>
+#include <sstream>
+#include <string>
 #include <GL/glew.h>
 #include <GL/glut.h>
 
@@ -334,7 +336,7 @@ namespace ark {
     }
 
     __host__
-    void GpuTsdfGenerator::SavePLY(std::string filename) {
+    void GpuTsdfGenerator::SavePLY(std::string filename, std::stringstream& outputString) {
         {
             std::unique_lock<std::mutex> lock(tsdf_mutex_);
             cudaMemcpy(TSDF_, dev_TSDF_,
@@ -344,8 +346,9 @@ namespace ark {
 
             checkCUDA(__LINE__, cudaGetLastError());
         }
-        tsdf2mesh(filename);
+        tsdf2mesh(filename, outputString);
     }
+
 
     __host__
     void GpuTsdfGenerator::render() {
@@ -365,7 +368,7 @@ namespace ark {
     }
 
     __host__
-    void GpuTsdfGenerator::tsdf2mesh(std::string outputFileName) {
+    void GpuTsdfGenerator::tsdf2mesh(std::string outputFileName, std::stringstream& outputString) {
         std::vector<Face> faces;
         std::vector<Vertex> vertices;
 
@@ -488,8 +491,12 @@ namespace ark {
 
 
         std::cout << vertexCount << std::endl;
+
+        
         std::ofstream plyFile;
+
         plyFile.open(outputFileName);
+
         plyFile << "ply\nformat ascii 1.0\ncomment stanford bunny\nelement vertex ";
         plyFile << vertices.size() << "\n";
         plyFile
@@ -503,6 +510,13 @@ namespace ark {
         for (auto f : faces) {
             plyFile << "3 " << f.vIdx[0] << " " << f.vIdx[1] << " " << f.vIdx[2] << "\n";
         }
+
+
+        //std::ostringstream ss;
+        //ss << plyFile.rdbuf();
+        //outputString = ss.str();
+        outputString << plyFile.rdbuf();
+
         plyFile.close();
         std::cout << "File saved" << std::endl;
     }
