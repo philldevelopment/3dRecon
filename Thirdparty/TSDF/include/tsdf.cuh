@@ -425,8 +425,9 @@ namespace ark {
         void SaveTSDF(std::string filename);
 
         __host__
-        void SavePLY(std::string filename);
+        void SavePLY(std::string filename, std::stringstream& outputString);
 
+        __host__
         std::vector<Vertex>* getVertices();
 
         __host__
