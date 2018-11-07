@@ -36,7 +36,11 @@ namespace ark{
 
         void Run();
 
+        void SavePly(std::string filename, std::stringstream& outputString);
         void SavePly(std::string filename);
+
+        //not using
+        void GetPly(std::stringstream& outputString);
 
         void Render();
 
