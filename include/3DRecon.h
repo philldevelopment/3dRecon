@@ -19,7 +19,7 @@ namespace ark{
 
     class 3DRecon{
     public:
-        3DRecon(string yaml_fil);
+        3DRecon(string yaml_file);
 
         void Start();
 
