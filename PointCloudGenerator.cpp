@@ -137,8 +137,14 @@ namespace ark {
         mpGpuTsdfGenerator->render();
     }
 
+
+    void PointCloudGenerator::SavePly(std::string filename, std::stringstream& outputString) {
+        mpGpuTsdfGenerator->SavePLY(filename, outputString);
+    }
+
     void PointCloudGenerator::SavePly(std::string filename) {
-        mpGpuTsdfGenerator->SavePLY(filename);
+        std::stringstream empty;
+        mpGpuTsdfGenerator->SavePLY(filename, empty);
     }
 
     void PointCloudGenerator::OnKeyFrameAvailable(const RGBDFrame &keyFrame) {
