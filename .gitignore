@@ -293,3 +293,4 @@ include/Version.h
 # tools/**
 # !tools/packages.config
 ORBSLAM src/Vocabulary/.DS_Store
+.DS_Store
