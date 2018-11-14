@@ -3,32 +3,34 @@
 
 using namespace std;
 
+
+//have a mesh class (PCL) (points + triangles)
+//be able to update mesh without slam, just (image, location) (update())
+//delete()
+//save()
+//load() (can take previously created meshes and update them)
+//simplify() (from colorizer)
+
+
+
+
 3DRecon::3DRecon(string yaml_file){
     pointCloudGenerator = new ark::PointCloudGenerator(yaml_file);
-    slam = new ark::ORBSLAMSystem("/ORBSLAM src/Vocabulary/ORBvoc.txt", yaml_file, ark::ORBSLAMSystem::RGBD, true);
+}
 
+void 3DRecon:AddSLAMSystem(ark::ORBSLAMSystem slam){
     slam->AddKeyFrameAvailableHandler([pointCloudGenerator](const ark::RGBDFrame &keyFrame) {
-        return pointCloudGenerator->OnKeyFrameAvailable(keyFrame);
-    }, "PointCloudFusion");
+            return pointCloudGenerator->OnKeyFrameAvailable(keyFrame);
+        }, "PointCloudFusion");
 }
 
 void 3DRecon::Start(){
-    slam->Start();
     pointCloudGenerator->Start();
-    tframe = 1;
 }
 
-bool 3DRecon::IsRunning(){
-    return slam->isRunning;
-}
-
-void 3DRecon::Update(cv::Mat imRGB,cv::Mat imD){
-    slam->PushFrame(imRGB, imD, tframe);
+void 3DRecon::UpdateMesh(cv::Mat &imRGB,cv::Mat &imD, cv::Mat &Twc){
+    pointCloudGenerator->
     pointCloudGenerator->GetPly(ss);
-}
-
-stringstream 3DRecon::GetCurrentTSDFMesh(){
-    return ss;
 }
 
 
@@ -48,7 +50,7 @@ void 3DRecon::Simplify(){
 }
 
 void 3DRecon::~3DRecon(){
-    delete ss;
+    delete stringstreamply;
     delete pointCloudGenerator;
     delete slam;
     delete colorizer;
