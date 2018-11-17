@@ -310,6 +310,10 @@ int main(int argc, char **argv) {
     pointCloudGenerator = new ark::PointCloudGenerator(argv[2]);
     slam = new ark::ORBSLAMSystem(argv[1], argv[2], ark::ORBSLAMSystem::RGBD, true);
 
+
+    // how are the handlers in MapKeyframeHandler called in SlamSystem module
+    // is a handler called per pushFrame (cant see how you update keyframe)
+    //add (KeyFrameAvailableHandler handler, string name) to mMapKeyFrameAvailableHandler
     slam->AddKeyFrameAvailableHandler([pointCloudGenerator](const ark::RGBDFrame &keyFrame) {
         return pointCloudGenerator->OnKeyFrameAvailable(keyFrame);
     }, "PointCloudFusion");

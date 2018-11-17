@@ -135,11 +135,11 @@ void decimateAndProject(std::string inputFileName) {
     std::unordered_map<std::string, int> map;
     for (size_t i = 0; i < cloud_ptr->points.size(); ++i) {
         double p[3];
-        decimated->GetPoint(i, p);
+        decimated->GetPoint(i, p); //get RGB of point i
         cloud_ptr->points[i].x = p[0];
         cloud_ptr->points[i].y = p[1];
         cloud_ptr->points[i].z = p[2];
-        map[pointToString(cloud_ptr->points[i])] = i;
+        map[pointToString(cloud_ptr->points[i])] = i; //name->index of point
     }
 //
 //    pcl::ExtractIndices<pcl::PointXYZ> extract;
@@ -518,7 +518,7 @@ int main(int argc, char *argv[])
     int size = atoi(argv[2]);
     std::string finalOutputName = string(argv[1]).substr(0,string(argv[1]).find("."))+"_simplified.ply";
 
-    cloud_ptr = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
+    cloud_ptr = pcl::PointCloud<pcl::PointXYZRGBf>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>());
     kdtree = pcl::KdTreeFLANN<pcl::PointXYZRGB>::Ptr(new pcl::KdTreeFLANN<pcl::PointXYZRGB>());
 
     decimateAndProject(denseCloudName);

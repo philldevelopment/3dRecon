@@ -349,6 +349,20 @@ namespace ark {
         tsdf2mesh(filename, outputString);
     }
 
+    __host__
+    void GpuTsdfGenerator::SaveModel(std::vector<Face> &faces, std::vector<Vertex> &vertices) {
+        {
+            std::unique_lock<std::mutex> lock(tsdf_mutex_);
+            cudaMemcpy(TSDF_, dev_TSDF_,
+                       param_->total_vox * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(TSDF_color_, dev_TSDF_color_,
+                       3 * param_->total_vox * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+
+            checkCUDA(__LINE__, cudaGetLastError());
+        }
+        tsdf2mesh_model(faces,vertices);
+    }
+
 
     __host__
     void GpuTsdfGenerator::render() {
@@ -364,6 +378,122 @@ namespace ark {
                            -10 * tri_[i].p[j].z * param_->vox_size + 10);
             }
             glEnd();
+        }
+    }
+
+    __host__
+    void GpuTsdfGenerator::tsdf2mesh_model(std::vector<Face> &faces, std::vector<Vertex> &vertices){
+        std::unordered_map<std::string, int> verticesIdx;
+        std::vector<std::list<std::pair<Vertex, int>>> hash_table(param_->total_vox,
+                                                                  std::list<std::pair<Vertex, int>>());
+
+        int vertexCount = 0;
+
+        std::cout << "Start saving ply, totalsize: " << param_->total_vox << std::endl;
+        for (size_t i = 0; i < param_->total_vox; ++i) {
+            int zi = i / (param_->vox_dim.x * param_->vox_dim.y);
+            int yi = (i - zi * param_->vox_dim.x * param_->vox_dim.y) / param_->vox_dim.x;
+            int xi = i - zi * param_->vox_dim.x * param_->vox_dim.y - yi * param_->vox_dim.x;
+            if (xi == param_->vox_dim.x - 1 || yi == param_->vox_dim.y - 1 || zi == param_->vox_dim.z - 1)
+                continue;
+            GRIDCELL grid;
+            std::vector<std::vector<int>> idx_map = {{0, 0, 0},
+                                                     {0, 1, 0},
+                                                     {1, 1, 0},
+                                                     {1, 0, 0},
+                                                     {0, 0, 1},
+                                                     {0, 1, 1},
+                                                     {1, 1, 1},
+                                                     {1, 0, 1}};
+            for (int k = 0; k < 8; ++k) {
+                int cxi = xi + idx_map[k][0];
+                int cyi = yi + idx_map[k][1];
+                int czi = zi + idx_map[k][2];
+                grid.p[k] = Vertex(cxi, cyi, czi);
+                grid.p[k].r = TSDF_color_[3 * (czi * param_->vox_dim.y * param_->vox_dim.z +
+                                               cyi * param_->vox_dim.z + cxi)];
+                grid.p[k].g = TSDF_color_[
+                        3 * (czi * param_->vox_dim.y * param_->vox_dim.z + cyi * param_->vox_dim.z + cxi) + 1];
+                grid.p[k].b = TSDF_color_[
+                        3 * (czi * param_->vox_dim.y * param_->vox_dim.z + cyi * param_->vox_dim.z + cxi) + 2];
+                grid.val[k] = TSDF_[czi * param_->vox_dim.y * param_->vox_dim.z + cyi * param_->vox_dim.z +
+                                    cxi];
+            }
+
+            int cubeIndex = 0;
+            if (grid.val[0] < 0) cubeIndex |= 1;
+            if (grid.val[1] < 0) cubeIndex |= 2;
+            if (grid.val[2] < 0) cubeIndex |= 4;
+            if (grid.val[3] < 0) cubeIndex |= 8;
+            if (grid.val[4] < 0) cubeIndex |= 16;
+            if (grid.val[5] < 0) cubeIndex |= 32;
+            if (grid.val[6] < 0) cubeIndex |= 64;
+            if (grid.val[7] < 0) cubeIndex |= 128;
+            Vertex vertlist[12];
+            if (param_->edgeTable[cubeIndex] == 0)
+                continue;
+
+            /* Find the vertices where the surface intersects the cube */
+            if (param_->edgeTable[cubeIndex] & 1)
+                vertlist[0] =
+                        VertexInterp(0, grid.p[0], grid.p[1], grid.val[0], grid.val[1]);
+            if (param_->edgeTable[cubeIndex] & 2)
+                vertlist[1] =
+                        VertexInterp(0, grid.p[1], grid.p[2], grid.val[1], grid.val[2]);
+            if (param_->edgeTable[cubeIndex] & 4)
+                vertlist[2] =
+                        VertexInterp(0, grid.p[2], grid.p[3], grid.val[2], grid.val[3]);
+            if (param_->edgeTable[cubeIndex] & 8)
+                vertlist[3] =
+                        VertexInterp(0, grid.p[3], grid.p[0], grid.val[3], grid.val[0]);
+            if (param_->edgeTable[cubeIndex] & 16)
+                vertlist[4] =
+                        VertexInterp(0, grid.p[4], grid.p[5], grid.val[4], grid.val[5]);
+            if (param_->edgeTable[cubeIndex] & 32)
+                vertlist[5] =
+                        VertexInterp(0, grid.p[5], grid.p[6], grid.val[5], grid.val[6]);
+            if (param_->edgeTable[cubeIndex] & 64)
+                vertlist[6] =
+                        VertexInterp(0, grid.p[6], grid.p[7], grid.val[6], grid.val[7]);
+            if (param_->edgeTable[cubeIndex] & 128)
+                vertlist[7] =
+                        VertexInterp(0, grid.p[7], grid.p[4], grid.val[7], grid.val[4]);
+            if (param_->edgeTable[cubeIndex] & 256)
+                vertlist[8] =
+                        VertexInterp(0, grid.p[0], grid.p[4], grid.val[0], grid.val[4]);
+            if (param_->edgeTable[cubeIndex] & 512)
+                vertlist[9] =
+                        VertexInterp(0, grid.p[1], grid.p[5], grid.val[1], grid.val[5]);
+            if (param_->edgeTable[cubeIndex] & 1024)
+                vertlist[10] =
+                        VertexInterp(0, grid.p[2], grid.p[6], grid.val[2], grid.val[6]);
+            if (param_->edgeTable[cubeIndex] & 2048)
+                vertlist[11] =
+                        VertexInterp(0, grid.p[3], grid.p[7], grid.val[3], grid.val[7]);
+
+            /* Create the triangle */
+            for (int ti = 0; param_->triTable[cubeIndex][ti] != -1; ti += 3) {
+                Face f;
+                Triangle t;
+                t.p[0] = vertlist[param_->triTable[cubeIndex][ti]];
+                t.p[1] = vertlist[param_->triTable[cubeIndex][ti + 1]];
+                t.p[2] = vertlist[param_->triTable[cubeIndex][ti + 2]];
+
+                uint3 grid_size = make_uint3(param_->vox_dim.x, param_->vox_dim.y, param_->vox_dim.z);
+                for (int pi = 0; pi < 3; ++pi) {
+                    int idx = find_vertex(t.p[pi], grid_size, param_->vox_size, hash_table);
+                    if (idx == -1) {
+                        insert_vertex(t.p[pi], vertexCount, grid_size, param_->vox_size, hash_table);
+                        f.vIdx[pi] = vertexCount++;
+                        t.p[pi].x = t.p[pi].x * param_->vox_size + param_->vox_origin.x;
+                        t.p[pi].y = t.p[pi].y * param_->vox_size + param_->vox_origin.y;
+                        t.p[pi].z = t.p[pi].z * param_->vox_size + param_->vox_origin.z;
+                        vertices.push_back(t.p[pi]);
+                    } else
+                        f.vIdx[pi] = idx;
+                }
+                faces.push_back(f);
+            }
         }
     }
 
@@ -509,7 +639,7 @@ namespace ark {
         }
         for (auto f : faces) {
             plyFile << "3 " << f.vIdx[0] << " " << f.vIdx[1] << " " << f.vIdx[2] << "\n";
-        }
+        }｀
 
 
         //std::ostringstream ss;

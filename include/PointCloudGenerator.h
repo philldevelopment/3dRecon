@@ -52,7 +52,7 @@ namespace ark{
         std::thread *mptRun;
 
         //TSDF Generator
-        GpuTsdfGenerator *mpGpuTsdfGenerator;
+        GpuTsdfGenerator *`;
 
         //RGBDFrame Map
         std::map<int, ark::RGBDFrame> mMapRGBDFrame;

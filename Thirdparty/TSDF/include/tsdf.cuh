@@ -428,6 +428,12 @@ namespace ark {
         void SavePLY(std::string filename, std::stringstream& outputString);
 
         __host__
+        void SaveModel(std::vector<Face> &faces, std::vector<Vertex> &vertices);
+
+        __host__
+        void tsdf2mesh_model(std::vector<Face> &faces, std::vector<Vertex> &vertices);
+
+        __host__
         std::vector<Vertex>* getVertices();
 
         __host__
@@ -444,7 +450,7 @@ namespace ark {
     private:
 
         __host__
-        void tsdf2mesh(std::string outputFileName);
+        void tsdf2mesh(std::string outputFileName, std::stringstream& outputString);
 
         __host__
         int3 calc_cell_pos(Vertex p, float cell_size);

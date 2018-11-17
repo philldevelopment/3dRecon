@@ -129,6 +129,7 @@ namespace ark {
         cam2base[14] = 0.0f;
         cam2base[15] = 1.0f;
 
+        //building global mesh model
         mpGpuTsdfGenerator->processFrame((float *)imD.datastart, (unsigned char *)imRGB.datastart, cam2base);
         std::cout << "TSDF processed" << std::endl;
     }
